@@ -8,6 +8,7 @@ from FastDLThreadClasses import BzipRunner, UpdateActiveThreads, NonBzipRunner, 
 
 # TODO Set exlcude list on auto detected game
 # TODO selected_game_changed gets called twice on init for some reason
+# something
 
 class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
