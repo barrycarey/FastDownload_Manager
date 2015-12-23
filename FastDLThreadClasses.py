@@ -69,8 +69,7 @@ class NonBzipRunner(QRunnable):
         try:
             shutil.copy2(self.input_file, self.output_file)
         except IOError as e:
-            print("[x] Failed To Sync: " + self.input_file)
-            print("[x] Error: " + e)
+            pass
 
         self.signals.thread_finished.emit("done")
 
@@ -153,7 +152,7 @@ class ProcessSourceDir(QThread):
         self.update_active_threads()
 
     def build_thread_pool(self):
-        print("Building thread pool")
+
         for file in self.files_to_sync:
             if self.bzip_enabled:
                 sync_thread = BzipRunner(file["input"], file["output"], file["output_dir"])

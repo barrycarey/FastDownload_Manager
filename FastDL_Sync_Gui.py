@@ -16,21 +16,22 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
         super(self.__class__, self).__init__()
         self.setupUi(self)
 
+        # Games we currently support
         self.supported_games = ["garrysmod", "csgo", "tf"]
         self.set_support_games()
 
-        self.source_file_count = 0
-        self.fastdl_manifest = []
-        self.exclude_list = []
+        self.fastdl_manifest = []  # Stores All Files We Have Synced
+        self.exclude_list = []  # List of excludes loaded from exludes.txt
         self.total_files_to_sync = 0
-        self.files_to_sync = []
-        self.sync_threads = []
-        self.pool = QThreadPool()
 
         self.failed_file_sync = []
+
+        # Threading Stuff
+        self.pool = QThreadPool()
         self.thread_lock = QMutex()
         self.pool.setMaxThreadCount(self.syncThreads.value())
 
+        # Allow the Text Box To Auto Scroll
         self.text_virtical_scroll = self.mainTextWindow.verticalScrollBar()
 
         self.input_directory = self.sourceDirDisplay.text()
@@ -67,26 +68,8 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
 
         if not source:
             source = QtGui.QFileDialog.getExistingDirectory(self,"Pick a source folder")
-        print("Source " + source)
 
-        # Make sure the selected directory contains a server of a game type we support
-        for curdir, dirs, files in os.walk(source):
-            for dir in dirs:
-                for game in self.supported_games:
-                    if dir == game:
-
-                        self.write_to_gui_console("Found " + game + " In Current Directing.  Setting Source Path")
-                        self.selectedGameCombo.setCurrentIndex(self.selectedGameCombo.findText(game))
-                        self.sourceDirDisplay.setText(os.path.join(source.lower(), game))
-                        self.input_directory = source.lower()
-                        self.selected_game_changed()
-                        return
-
-            break
-
-        self.write_to_gui_console('<span style="front-weight:bold; color:red;">No Supported Games Found In Selected Directory</span>')
-        self.sourceDirDisplay.setText("")
-        self.input_directory = ""
+        self.detect_game_in_source(directory=source)
 
     def btn_select_dest_folder(self):
         """
@@ -116,24 +99,34 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
 
         self.selectedGameCombo.addItems(self.supported_games)
 
-        for game in self.supported_games:
-            if self.detect_game_in_source(game):
-                self.selected_game_changed()
-                break
+        self.detect_game_in_source()
 
-    def detect_game_in_source(self, game, directory=os.getcwd()):
+    def detect_game_in_source(self, directory=None):
         """
         Check if the selected directory contains a game that we support.
 
         This is detected by the existence of a directory named the same value as the game selected in the dropdown.
         """
 
-        if os.path.isdir(os.path.join(directory, game)):
-            self.write_to_gui_console("Found " + game + " In Current Directing.  Setting Source Path")
-            self.selectedGameCombo.setCurrentIndex(self.selectedGameCombo.findText(game))
-            self.btn_select_source_folder(os.path.join(directory, game))
-            return True
-        return False
+        if directory:
+            # Make sure the selected directory contains a server of a game type we support
+            for curdir, dirs, files in os.walk(directory):
+                for dir in dirs:
+                    for game in self.supported_games:
+                        if dir == game:
+
+                            self.write_to_gui_console("Found " + game + " In Selected Directory.")
+                            self.selectedGameCombo.setCurrentIndex(self.selectedGameCombo.findText(game))
+                            self.sourceDirDisplay.setText(os.path.join(directory.lower(), game))
+                            self.input_directory = os.path.join(directory.lower(), game)
+                            self.selected_game_changed()
+                            return
+
+                break
+
+        self.write_to_gui_console("No Supported Games Found In Selected Directory", bold=True, color="Red")
+        self.sourceDirDisplay.setText("")
+        self.input_directory = ""
 
 
     def selected_game_changed(self):
@@ -186,6 +179,14 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
         This is called when the user click the Sync Now button in the GUI.
 
         """
+
+        if not self.sourceDirDisplay.text():
+            self.write_to_gui_console("No Source Directory Selected, Sync Cannot Run", bold=True, color="red")
+            return
+
+        if not self.destDirDisplay.text():
+            self.write_to_gui_console("No FastDL Directory Selected, Sync Cannot Run", bold=True, color="red")
+            return
 
         self.progressBar.reset()
         self.cleanup_opposite_sync_type()
@@ -278,8 +279,8 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
         self.write_fastdl_manifest()
         self.progressBar.setValue(self.progressBar.maximum())
         self.activeThreads.setText("0")
-        self.write_to_gui_console('<span style="font-weight:bold;color:green;">Sync Has Completed')
-        self.write_to_gui_console("<span style='font-weight:bold;color:green;'>Total Files Synced: " + str(self.total_files_to_sync) + "</span>")
+        self.write_to_gui_console("Sync Has Completed", bold=True, color="green")
+        self.write_to_gui_console("Total Files Synced: " + str(self.total_files_to_sync), bold=True, color="green")
         self.runSync.setDisabled(False)
 
     def update_active_threads(self, count):
@@ -344,11 +345,24 @@ class FastDLSyncGui(QtGui.QMainWindow, design.Ui_MainWindow):
 
         return output_dir, output_file, relative_game_path
 
-    def write_to_gui_console(self, line):
+    def write_to_gui_console(self, line, bold=None, color=None):
         """
         Convenience method for writing to the GUI's output text box
         """
-        self.mainTextWindow.append(line)
+        output_string = ""
+        if bold:
+            output_string += "<strong>"
+        if color:
+            output_string += '<span style="color:' + color + ';">'
+
+        output_string += line
+
+        if bold:
+            output_string += "</strong>"
+        if color:
+            output_string += "</span>"
+
+        self.mainTextWindow.append(output_string)
         self.mainTextWindow.ensureCursorVisible()
 
 

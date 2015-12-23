@@ -388,3 +388,5 @@ tf
 .bz2
 .exe
 .txt
+.bin
+.json
