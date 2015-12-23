@@ -4,7 +4,7 @@ import sys
 import design
 import os
 
-from FastDLThreadClasses import BzipRunner, UpdateActiveThreads, NonBzipRunner, ProcessSourceDir
+from FastDL_Thread_Classes import ProcessSourceDir
 
 # TODO Set exlcude list on auto detected game
 # TODO selected_game_changed gets called twice on init for some reason
